@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "../../../utils/db";
-import CommentController from "../../../controllers/CommentController";
+// import CommentController from "../../../controllers/CommentController";
 
 export default async function handler(
   req: NextApiRequest,

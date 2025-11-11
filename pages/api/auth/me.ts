@@ -1,7 +1,7 @@
 // pages/api/auth/me.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import { UserController } from "@/controllers/UserController";
+// import { UserController } from "@/controllers/UserController";
 import { verifyToken } from "@/utils/auth";
 import cookie from "cookie";
 

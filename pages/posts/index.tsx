@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import Link from "next/link";
-import ReportPostModal from "@/components/ReportPostModal";
+// import ReportPostModal from "@/components/ReportPostModal";
 
 interface Post {
   _id: string;

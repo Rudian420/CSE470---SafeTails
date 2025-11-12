@@ -1,7 +1,7 @@
 // pages/api/auth/register.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import { UserController } from "@/controllers/UserController";
+// import { UserController } from "@/controllers/UserController";
 import { EmailService } from "@/utils/emailService";
 
 export default async function handler(

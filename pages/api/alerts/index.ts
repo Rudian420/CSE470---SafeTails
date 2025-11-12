@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import AlertController from "@/controllers/AlertController";
+// import AlertController from "@/controllers/AlertController";
 
 export default async function handler(
   req: NextApiRequest,

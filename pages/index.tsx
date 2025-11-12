@@ -2,11 +2,11 @@
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import ImageSlider from "@/components/ImageSlider";
-// import CommentForm from "@/components/CommentForm";
+import CommentForm from "@/components/CommentForm";
 import axios from "axios";
 import { useState, useEffect } from "react";
 
-// import { Comment } from "@/types/comment";
+import { Comment } from "@/types/comment";
 
 export default function Home() {
   const { user, loading } = useAuth();

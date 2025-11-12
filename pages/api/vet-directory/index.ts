@@ -1,8 +1,8 @@
 // pages/api/vet-directory/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-// import { VetDirectoryController } from "@/controllers/VetDirectoryController";
-// import { adminAuth } from "@/utils/adminAuth";
+import { VetDirectoryController } from "@/controllers/VetDirectoryController";
+import { adminAuth } from "@/utils/adminAuth";
 import { userAuth } from "@/utils/userAuth";
 
 export default async function handler(

@@ -9,7 +9,7 @@ export default function MyApp({ Component, pageProps }: AppProps) {
     <AuthProvider>
       <Navbar />
       <Component {...pageProps} />
-      {/* <AlertNotification /> */}
+      <AlertNotification />
     </AuthProvider>
   );
 }

@@ -1,0 +1,335 @@
+import { NextApiRequest, NextApiResponse } from "next";
+import dbConnect from "../utils/db";
+import Comment, { IComment } from "../models/Comment";
+import User from "../models/User";
+import { AuthenticatedRequest } from "../types/comment";
+
+class CommentController {
+  // Get all approved comments with user details
+  static async getApprovedComments(req: NextApiRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      console.log("Fetching approved comments..."); // Debug log
+
+      // Verify Comment model is available
+      if (!Comment) {
+        throw new Error("Comment model not available");
+      }
+
+      const comments = await Comment.find({ isApproved: true })
+        .populate("user", "name email role")
+        .sort({ createdAt: -1 })
+        .limit(6);
+
+      console.log(`Found ${comments.length} approved comments`); // Debug log
+
+      res.json({
+        success: true,
+        data: comments,
+      });
+    } catch (error) {
+      console.error("Error in getApprovedComments:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch comments: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Create a new comment
+  static async createComment(req: AuthenticatedRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const { content, rating } = req.body;
+      const userId = req.user.id;
+
+      console.log("Creating comment for user:", userId); // Debug log
+
+      // Validate input
+      if (!content || !rating) {
+        return res.status(400).json({
+          success: false,
+          message: "Content and rating are required",
+        });
+      }
+
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Rating must be between 1 and 5",
+        });
+      }
+
+      // Get user details to determine user type
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      const userType = user.role === "vet" ? "vet" : "user";
+
+      // Check if user has already commented
+      const existingComment = await Comment.findOne({ user: userId });
+      if (existingComment) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already submitted a review",
+        });
+      }
+
+      // Create new comment
+      const comment = new Comment({
+        user: userId,
+        userType,
+        content,
+        rating,
+        isApproved: false, // Comments need approval by default
+      });
+
+      await comment.save();
+
+      // Populate user details for response
+      await comment.populate("user", "name email role");
+
+      console.log("Comment created successfully:", comment._id); // Debug log
+
+      res.status(201).json({
+        success: true,
+        message: "Review submitted successfully and pending approval",
+        data: comment,
+      });
+    } catch (error) {
+      console.error("Error in createComment:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to create comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Get user's own comment
+  static async getUserComment(req: AuthenticatedRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const userId = req.user.id;
+
+      const comment = await Comment.findOne({ user: userId }).populate(
+        "user",
+        "name email role"
+      );
+
+      res.json({
+        success: true,
+        data: comment,
+      });
+    } catch (error) {
+      console.error("Error in getUserComment:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch user comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Update user's comment
+  static async updateComment(req: AuthenticatedRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const { content, rating } = req.body;
+      const userId = req.user.id;
+
+      // Validate input
+      if (!content || !rating) {
+        return res.status(400).json({
+          success: false,
+          message: "Content and rating are required",
+        });
+      }
+
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          message: "Rating must be between 1 and 5",
+        });
+      }
+
+      const comment = await Comment.findOne({ user: userId });
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: "Review not found",
+        });
+      }
+
+      // Update comment
+      comment.content = content;
+      comment.rating = rating;
+      comment.isApproved = false; // Reset approval status after update
+
+      await comment.save();
+      await comment.populate("user", "name email role");
+
+      res.json({
+        success: true,
+        message: "Review updated successfully and pending approval",
+        data: comment,
+      });
+    } catch (error) {
+      console.error("Error in updateComment:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to update comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Delete user's own comment
+  static async deleteUserComment(
+    req: AuthenticatedRequest,
+    res: NextApiResponse
+  ) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const userId = req.user.id;
+
+      const comment = await Comment.findOneAndDelete({ user: userId });
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: "Review not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Review deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error in deleteUserComment:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to delete comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Admin: Get all comments for approval
+  static async getAllComments(req: NextApiRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const comments = await Comment.find()
+        .populate("user", "name email role")
+        .sort({ createdAt: -1 });
+
+      res.json({
+        success: true,
+        data: comments,
+      });
+    } catch (error) {
+      console.error("Error in getAllComments:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch all comments: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Admin: Approve/Reject comment
+  static async approveComment(req: NextApiRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const { commentId } = req.query;
+      const { isApproved } = req.body;
+
+      const comment = await Comment.findByIdAndUpdate(
+        commentId,
+        { isApproved },
+        { new: true }
+      ).populate("user", "name email role");
+
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: "Comment not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Comment ${isApproved ? "approved" : "rejected"} successfully`,
+        data: comment,
+      });
+    } catch (error) {
+      console.error("Error in approveComment:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to approve/reject comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+
+  // Admin: Delete comment by ID
+  static async deleteCommentById(req: NextApiRequest, res: NextApiResponse) {
+    try {
+      // Ensure database connection
+      await dbConnect();
+
+      const { commentId } = req.query;
+
+      const comment = await Comment.findByIdAndDelete(commentId);
+
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: "Comment not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Comment deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error in deleteCommentById:", error); // Enhanced error logging
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to delete comment: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      });
+    }
+  }
+}
+
+export default CommentController;
